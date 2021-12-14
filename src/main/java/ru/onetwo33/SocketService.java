@@ -1,5 +1,7 @@
 package ru.onetwo33;
 
+import ru.onetwo33.domain.HttpResponse;
+
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -33,10 +35,15 @@ public class SocketService implements Closeable {
         }
     }
 
-    public void sendResponse(String rawResponse) {
+    public void sendResponse(HttpResponse httpResponse) {
         try {
             PrintWriter output = new PrintWriter(socket.getOutputStream());
-            output.print(rawResponse);
+
+            output.write(httpResponse.getStatusCode());
+            for (String pair : httpResponse.getHeaders().values()) {
+                output.write(pair);
+            }
+            output.write(httpResponse.getBody());
             output.flush();
         } catch (IOException e) {
             throw new IllegalStateException(e);

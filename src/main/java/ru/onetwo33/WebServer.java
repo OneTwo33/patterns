@@ -11,13 +11,12 @@ public class WebServer {
     public static void main(String[] args) {
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Server started!");
-            RequestParser requestParser = new RequestParser();
 
             while (true) {
                 Socket socket = serverSocket.accept();
                 System.out.println("New client connected!");
 
-                new Thread(new RequestHandler(new SocketService(socket), requestParser)).start();
+                new Thread(new RequestHandler(new SocketService(socket), new RequestParser())).start();
             }
         } catch (IOException e) {
             e.printStackTrace();
