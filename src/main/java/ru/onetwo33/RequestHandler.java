@@ -1,6 +1,7 @@
 package ru.onetwo33;
 
 import ru.onetwo33.domain.HttpRequest;
+import ru.onetwo33.domain.HttpResponse;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -13,7 +14,7 @@ import static ru.onetwo33.Config.WWW;
 public class RequestHandler implements Runnable {
 
     private final SocketService socketService;
-    public final RequestParser requestParser;
+    private final RequestParser requestParser;
 
     public RequestHandler(SocketService socketService, RequestParser requestParser) {
         this.socketService = socketService;
@@ -25,36 +26,35 @@ public class RequestHandler implements Runnable {
 
         Deque<String> rawRequest = socketService.readRequest();
         HttpRequest httpRequest = requestParser.parseRequest(rawRequest);
-        StringBuilder response = new StringBuilder();
+        HttpResponse httpResponse = new HttpResponse();
 
         if (httpRequest.getMethod().equals("GET")) {
             Path path = Paths.get(WWW, httpRequest.getUrl());
 
             if (!Files.exists(path)) {
-                response.append("HTTP/1.1 404 NOT_FOUND\n");
-                response.append("Content-Type: text/html; charset=utf-8\n");
-                response.append("\n");
-                response.append("<h1>Файл не найден!</h1>");
-                socketService.sendResponse(response.toString());
+                httpResponse.setStatusCode("HTTP/1.1 404 NOT_FOUND\n");
+                httpResponse.setHeaders("Content-Type: ", "text/html; charset=utf-8\n");
+                httpResponse.setBody("\n<h1>Файл не найден!</h1>");
+                socketService.sendResponse(httpResponse);
                 return;
             }
 
-            response.append("HTTP/1.1 200 OK\n");
-            response.append("Content-Type: text/html; charset=utf-8\n");
-            response.append("\n");
-
+            httpResponse.setStatusCode("HTTP/1.1 200 OK\n");
+            httpResponse.setHeaders("Content-Type: ", "text/html; charset=utf-8\n");
             try {
-                Files.readAllLines(path).forEach(response::append);
+                StringBuilder body = new StringBuilder();
+                body.append("\n");
+                Files.readAllLines(path).forEach(body::append);
+                httpResponse.setBody(body.toString());
             } catch (IOException e) {
                 throw new IllegalStateException(e);
             }
-            socketService.sendResponse(response.toString());
+            socketService.sendResponse(httpResponse);
         } else {
-            response.append("HTTP/1.1 405 METHOD_NOT_ALLOWED\n");
-            response.append("Content-Type: text/html; charset=utf-8\n");
-            response.append("\n");
-            response.append("<h1>Метод не поддерживается!</h1>");
-            socketService.sendResponse(response.toString());
+            httpResponse.setStatusCode("HTTP/1.1 405 METHOD_NOT_ALLOWED\n");
+            httpResponse.setHeaders("Content-Type: ", "text/html; charset=utf-8\n");
+            httpResponse.setBody("\n<h1>Метод не поддерживается!</h1>");
+            socketService.sendResponse(httpResponse);
             return;
         }
         try {
